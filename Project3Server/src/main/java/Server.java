@@ -22,7 +22,7 @@ public class Server{
 	
 	public class TheServer extends Thread{
 		public void run() {
-			try(ServerSocket mysocket = new ServerSocket(5555);){
+			try(ServerSocket mysocket = new ServerSocket(5555)){
 		    System.out.println("Server is waiting for a client!");
 			
 		    while(true) {
@@ -44,6 +44,7 @@ public class Server{
 			Socket connection;
 			int count;
 			String ID = "";
+			String state = "idle";
 			ObjectInputStream in;
 			ObjectOutputStream out;
 			
@@ -77,11 +78,29 @@ public class Server{
 										out.writeObject(new Message(ID, "", "", Message.Types.ACCEPT_ID));
 									}
 									break;
+								case QUEUE:
+									state = "looking";
+									callback.accept(new Message("Client: "+ID+" is looking for a game", "", "", Message.Types.SERVER_MSG));
+									for (ClientThread ct : clients) {
+										if (Objects.equals(ct.state, "looking") && ct != this) {
+											state = "playing";
+											ct.state = "playing";
+											callback.accept(new Message("Client: "+ID+" is playing against client: "+ct.ID, "", "", Message.Types.SERVER_MSG));
+											out.writeObject(new Message("", ct.ID, "", Message.Types.QUEUE));
+											ct.out.writeObject(new Message("", ID, "", Message.Types.QUEUE));
+											break;
+										}
+									}
+									break;
 							}
 						}
 					    catch(Exception e) {
 							clients.remove(this);
-							callback.accept(new Message("Client: "+count+" has disconnected from the server", "", "", Message.Types.SERVER_MSG));
+							if (!Objects.equals(ID, "")) {
+								callback.accept(new Message("Client: "+ID+" has disconnected from the server", "", "", Message.Types.SERVER_MSG));
+							} else {
+								callback.accept(new Message("Client: "+count+" has disconnected from the server", "", "", Message.Types.SERVER_MSG));
+							}
 					    	break;
 					    }
 					}
