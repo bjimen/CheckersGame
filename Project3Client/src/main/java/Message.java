@@ -12,7 +12,8 @@ public class Message implements Serializable {
         ACCEPT_ID,
         REJECT_ID,
         SERVER_MSG,
-        QUEUE
+        QUEUE,
+        SEND_MSG
     }
 
     Message(String msg, String sender, String receiver, Types type) {

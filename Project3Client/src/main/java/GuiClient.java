@@ -12,7 +12,6 @@ import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
@@ -27,12 +26,14 @@ public class GuiClient extends Application{
 
 	HashMap<String, Scene> sceneMap;
 	BorderPane bpMainMenu, bpQueue, bpGame;
-	VBox vbUsername, vbMainMenu;
-	Text txtUsername, txtQueue, txtGame;
-	TextField tfUsername;
-	Button btUsername, btPlay, btQuit;
-	Image imLogo;
-	ImageView ivLogo;
+	VBox vbUsername, vbMainMenu, vbBoard, vbChat;
+	HBox hbGame;
+	Text txtUsername, txtQueue, txtOpp;
+	TextField tfUsername, tfChat;
+	Button btUsername, btPlay, btQuit, btSend;
+	Image imLogo, imBoard;
+	ImageView ivLogo, ivBoard;
+	ListView<String> lvChat;
 	
 	public static void main(String[] args) {
 		launch(args);
@@ -53,7 +54,11 @@ public class GuiClient extends Application{
 						case QUEUE:
 							opponent = data.sender;
 							txtQueue.setText("Opponent found!");
+							txtOpp.setText(opponent);
 							primaryStage.setScene(sceneMap.get("game"));
+							break;
+						case SEND_MSG:
+							lvChat.getItems().add(opponent+" said: "+data.msg);
 							break;
 					}
 			});
@@ -96,7 +101,24 @@ public class GuiClient extends Application{
 		txtQueue = new Text("Looking for players...");
 		sceneMap.put("queue", createQueueGUI());
 
-		txtGame = new Text();
+		txtOpp = new Text();
+		imBoard = new Image("board.png", 400, 400, true, false);
+		ivBoard = new ImageView(imBoard);
+		lvChat = new ListView<>();
+		lvChat.setMaxHeight(350);
+		lvChat.setMaxWidth(200);
+		tfChat = new TextField();
+		tfChat.setMaxWidth(200);
+		btSend = new Button("Send");
+		btSend.setMaxWidth(200);
+		btSend.setOnAction(e->{
+			String text = tfChat.getText();
+			if (!Objects.equals(text, "")) {
+				lvChat.getItems().add(ID+" said: "+text);
+				clientConnection.send(new Message(text, ID, opponent, Message.Types.SEND_MSG));
+				tfChat.clear();
+			}
+		});
 		sceneMap.put("game", createGameGUI());
 
 		primaryStage.setScene(sceneMap.get("username"));
@@ -111,11 +133,13 @@ public class GuiClient extends Application{
 	}
 
 	public Scene createMainMenuGUI() {
-		vbMainMenu = new VBox(10, ivLogo, btPlay, btQuit);
+		vbMainMenu = new VBox(10, btPlay, btQuit);
 		vbMainMenu.setAlignment(Pos.CENTER);
 		bpMainMenu = new BorderPane();
-		bpMainMenu.setPadding(new Insets(100));
+		bpMainMenu.setPadding(new Insets(25));
 		bpMainMenu.setCenter(vbMainMenu);
+		bpMainMenu.setTop(ivLogo);
+		bpMainMenu.setAlignment(ivLogo, Pos.TOP_CENTER);
 		return new Scene(bpMainMenu, 800, 450);
 	}
 
@@ -127,10 +151,13 @@ public class GuiClient extends Application{
 	}
 
 	public Scene createGameGUI() {
-		txtGame.setText(opponent);
+		vbBoard = new VBox(txtOpp, ivBoard);
+		vbBoard.setAlignment(Pos.CENTER);
+		vbChat = new VBox(lvChat, tfChat, btSend);
+		hbGame = new HBox(150, vbBoard, vbChat);
 		bpGame = new BorderPane();
-		bpGame.setPadding(new Insets(100));
-		bpGame.setCenter(txtGame);
+		bpGame.setPadding(new Insets(25));
+		bpGame.setCenter(hbGame);
 		return new Scene(bpGame, 800, 450);
 	}
 }
