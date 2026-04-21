@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.Random;
 
 
 public class Server{
@@ -72,7 +73,7 @@ public class Server{
 
 							switch(data.type) {
 								case SEND_ID:
-									if (usernameTaken(data.msg)) {
+									if (users.containsKey(data.msg)) {
 										out.writeObject(new Message("", "", "", Message.Types.REJECT_ID));
 									} else {
 										ID = data.msg;
@@ -86,11 +87,18 @@ public class Server{
 									callback.accept(new Message("Client: "+ID+" is looking for a game", "", "", Message.Types.SERVER_MSG));
 									for (ClientThread ct : clients) {
 										if (Objects.equals(ct.state, "looking") && ct != this) {
+											Random r = new Random();
+											boolean black = r.nextBoolean();
 											state = "playing";
 											ct.state = "playing";
 											callback.accept(new Message("Client: "+ID+" is playing against client: "+ct.ID, "", "", Message.Types.SERVER_MSG));
-											out.writeObject(new Message("", ct.ID, "", Message.Types.QUEUE));
-											ct.out.writeObject(new Message("", ID, "", Message.Types.QUEUE));
+											if (black) {
+												out.writeObject(new Message("true", ct.ID, "", Message.Types.BLACK));
+												ct.out.writeObject(new Message("false", ID, "", Message.Types.RED));
+											} else {
+												out.writeObject(new Message("false", ct.ID, "", Message.Types.RED));
+												ct.out.writeObject(new Message("true", ID, "", Message.Types.BLACK));
+											}
 											break;
 										}
 									}
@@ -99,10 +107,19 @@ public class Server{
 									callback.accept(new Message("Client: "+data.sender+" sent: "+data.msg+" to client: "+data.receiver, "", "", Message.Types.SERVER_MSG));
 									users.get(data.receiver).out.writeObject(new Message(data.msg, "", "", Message.Types.SEND_MSG));
 									break;
+								case MOVE:
+									callback.accept(new Message("Client: "+data.sender+" moved from: "+data.msg.charAt(0)+", "+data.msg.charAt(1)+" to: "+data.msg.charAt(2)+", "+data.msg.charAt(3), "", "", Message.Types.SERVER_MSG));
+									users.get(data.receiver).out.writeObject(new Message(data.msg, "", "", Message.Types.MOVE));
+									break;
+								case WIN:
+									callback.accept(new Message("Client: "+data.sender+" has lost against client: "+data.receiver, "", "", Message.Types.SERVER_MSG));
+									users.get(data.receiver).out.writeObject(new Message("", "", "", Message.Types.WIN));
+									break;
 							}
 						}
 					    catch(Exception e) {
 							clients.remove(this);
+							users.remove(ID);
 							if (!Objects.equals(ID, "")) {
 								callback.accept(new Message("Client: "+ID+" has disconnected from the server", "", "", Message.Types.SERVER_MSG));
 							} else {
@@ -113,15 +130,4 @@ public class Server{
 					}
 				}//end of run
 		}//end of client thread
-
-	public boolean usernameTaken(String ID) {
-		boolean contains = false;
-		for (ClientThread cl : clients) {
-			if (Objects.equals(cl.ID, ID)) {
-				contains = true;
-				break;
-			}
-		}
-		return contains;
-	}
 }

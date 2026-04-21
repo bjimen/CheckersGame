@@ -13,7 +13,12 @@ public class Message implements Serializable {
         REJECT_ID,
         SERVER_MSG,
         QUEUE,
-        SEND_MSG
+        BLACK,
+        RED,
+        SEND_MSG,
+        MOVE,
+        WIN,
+        LOSE
     }
 
     Message(String msg, String sender, String receiver, Types type) {
